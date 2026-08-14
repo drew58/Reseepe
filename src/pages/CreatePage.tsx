@@ -1,4 +1,4 @@
-import { Upload, Plus, X, Camera, Video, Loader2 } from "lucide-react";
+import { Upload, Plus, X, Camera, Video, Loader2, ChevronDown } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,12 +6,15 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const tagOptions = ["Cheap", "Fast", "Healthy", "Comfort", "Spicy", "Vegan"];
+const cookTimeNumbers = [5, 10, 15, 20, 30, 45, 60, 90, 120];
+const cookTimeUnits = ["min", "hour", "day"];
 
 const CreatePage = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [costEstimate, setCostEstimate] = useState("");
-  const [cookTime, setCookTime] = useState("");
+  const [cookTimeNum, setCookTimeNum] = useState("30");
+  const [cookTimeUnit, setCookTimeUnit] = useState("min");
   const [ingredients, setIngredients] = useState("");
   const [steps, setSteps] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -63,13 +66,20 @@ const CreatePage = () => {
       }
       const uploadedVideo = !!mediaFile?.type.startsWith("video/");
 
+      // Format cook time as "30 min" or "2 hours"
+      const cookTimeDisplay = cookTimeUnit === "hour" 
+        ? `${cookTimeNum} hour${parseInt(cookTimeNum) > 1 ? "s" : ""}`
+        : cookTimeUnit === "day"
+        ? `${cookTimeNum} day${parseInt(cookTimeNum) > 1 ? "s" : ""}`
+        : `${cookTimeNum} min`;
+
       const { error } = await supabase.from("recipes").insert({
         creator_id: user.id,
         title: title.trim(),
         video_url: uploadedVideo ? mediaUrl : null,
         thumbnail_url: !uploadedVideo ? mediaUrl || null : null,
         cost_estimate: costEstimate || null,
-        cook_time: cookTime || null,
+        cook_time: cookTimeDisplay,
         ingredients: ingredients.split("\n").filter(Boolean),
         steps: steps.split("\n").filter(Boolean),
         tags: selectedTags,
@@ -125,7 +135,10 @@ const CreatePage = () => {
             <img src={mediaPreview} className="w-full h-full object-cover" alt="Preview" />
           )}
           <button
-            onClick={() => { setMediaFile(null); setMediaPreview(null); }}
+            onClick={() => {
+              setMediaFile(null);
+              setMediaPreview(null);
+            }}
             className="absolute top-3 right-3 w-8 h-8 bg-foreground/60 backdrop-blur-sm rounded-full flex items-center justify-center"
           >
             <X className="w-4 h-4 text-background" />
@@ -167,28 +180,87 @@ const CreatePage = () => {
       <div className="space-y-4">
         <div>
           <label className="text-sm font-semibold text-foreground mb-1.5 block">Recipe Name</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Smoky Jollof Rice" className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Smoky Jollof Rice"
+            className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-sm font-semibold text-foreground mb-1.5 block">Est. Cost</label>
-            <input value={costEstimate} onChange={(e) => setCostEstimate(e.target.value)} placeholder="$5" className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input
+              value={costEstimate}
+              onChange={(e) => setCostEstimate(e.target.value)}
+              placeholder="$5"
+              className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
           </div>
           <div>
             <label className="text-sm font-semibold text-foreground mb-1.5 block">Cook Time</label>
-            <input value={cookTime} onChange={(e) => setCookTime(e.target.value)} placeholder="30 min" className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <div className="flex gap-2">
+              <select
+                value={cookTimeNum}
+                onChange={(e) => setCookTimeNum(e.target.value)}
+                className="flex-1 px-3 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 0.5rem center",
+                  backgroundSize: "1.5em 1.5em",
+                  paddingRight: "2.5rem",
+                }}
+              >
+                {cookTimeNumbers.map((num) => (
+                  <option key={num} value={num}>
+                    {num}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={cookTimeUnit}
+                onChange={(e) => setCookTimeUnit(e.target.value)}
+                className="flex-1 px-3 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 0.5rem center",
+                  backgroundSize: "1.5em 1.5em",
+                  paddingRight: "2.5rem",
+                }}
+              >
+                {cookTimeUnits.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         <div>
           <label className="text-sm font-semibold text-foreground mb-1.5 block">Ingredients</label>
-          <textarea value={ingredients} onChange={(e) => setIngredients(e.target.value)} rows={3} placeholder="List ingredients, one per line" className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+          <textarea
+            value={ingredients}
+            onChange={(e) => setIngredients(e.target.value)}
+            rows={3}
+            placeholder="List ingredients, one per line"
+            className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
         </div>
 
         <div>
           <label className="text-sm font-semibold text-foreground mb-1.5 block">Steps</label>
-          <textarea value={steps} onChange={(e) => setSteps(e.target.value)} rows={4} placeholder="Describe each step..." className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+          <textarea
+            value={steps}
+            onChange={(e) => setSteps(e.target.value)}
+            rows={4}
+            placeholder="Describe each step..."
+            className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
         </div>
 
         <div>

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { persistLike, persistSave } from "@/lib/recipeActions";
+import { convertCurrency, parseCostAmount, getCurrencySymbol } from "@/lib/currency";
 import { toast } from "sonner";
 import CommentsSheet from "@/components/CommentsSheet";
 import ShareSheet from "@/components/ShareSheet";
@@ -20,6 +21,7 @@ const RecipeDetail = () => {
   const [saved, setSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [userCurrency, setUserCurrency] = useState("USD");
 
   useEffect(() => {
     if (!id) return;
@@ -29,6 +31,21 @@ const RecipeDetail = () => {
       setLoading(false);
     })();
   }, [id]);
+
+  // Load user's currency preference
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("currency")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.currency) {
+        setUserCurrency(data.currency);
+      }
+    })();
+  }, [user]);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -46,11 +63,15 @@ const RecipeDetail = () => {
     if (!user || !id) return navigate("/auth");
     const next = !liked;
     setLiked(next);
-    setRecipe((r: any) => r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + (next ? 1 : -1)) } : r);
+    setRecipe((r: any) =>
+      r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + (next ? 1 : -1)) } : r
+    );
     const { error } = await persistLike(user.id, id, next);
     if (error) {
       setLiked(!next);
-      setRecipe((r: any) => r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + (next ? -1 : 1)) } : r);
+      setRecipe((r: any) =>
+        r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + (next ? -1 : 1)) } : r
+      );
       toast.error(error.message);
     }
   };
@@ -66,7 +87,15 @@ const RecipeDetail = () => {
     } else if (next) toast.success("Saved");
   };
 
-  // Real data only — no hardcoded fallback content.
+  // Convert cost to viewer's currency (assuming all costs are originally in USD)
+  const getConvertedCost = () => {
+    if (!recipe?.cost_estimate) return "";
+    const amount = parseCostAmount(recipe.cost_estimate);
+    if (!amount) return recipe.cost_estimate;
+    // Assume all stored costs are in USD
+    return convertCurrency(amount, "USD", userCurrency);
+  };
+
   const recipeIngredients: string[] = recipe?.ingredients?.length ? recipe.ingredients : [];
   const recipeSteps: string[] = recipe?.steps?.length ? recipe.steps : [];
   const hasMedia = !!(recipe?.thumbnail_url || recipe?.video_url);
@@ -110,33 +139,54 @@ const RecipeDetail = () => {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-foreground/20" />
-        <button onClick={() => navigate(-1)} className="absolute top-12 left-4 w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center">
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-12 left-4 w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center"
+        >
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
         <div className="absolute top-12 right-4 flex gap-2">
-          <button onClick={toggleLike} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center">
+          <button
+            onClick={toggleLike}
+            className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center"
+          >
             <Heart className={`w-5 h-5 ${liked ? "fill-red-500 text-red-500" : "text-foreground"}`} />
           </button>
-          <button onClick={() => setCommentsOpen(true)} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center">
+          <button
+            onClick={() => setCommentsOpen(true)}
+            className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center"
+          >
             <MessageCircle className="w-5 h-5 text-foreground" />
           </button>
-          <button onClick={toggleSave} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center">
+          <button
+            onClick={toggleSave}
+            className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center"
+          >
             <Bookmark className={`w-5 h-5 ${saved ? "fill-primary text-primary" : "text-foreground"}`} />
           </button>
-          <button onClick={() => setShareOpen(true)} className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center">
+          <button
+            onClick={() => setShareOpen(true)}
+            className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center"
+          >
             <Share2 className="w-5 h-5 text-foreground" />
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="px-5 -mt-8 relative z-10">
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="px-5 -mt-8 relative z-10"
+      >
         <div className="glass-card p-5">
           <h1 className="text-xl font-bold font-display text-foreground">{recipe.title}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{recipe.like_count || 0} likes • {recipe.comment_count || 0} comments</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {recipe.like_count || 0} likes • {recipe.comment_count || 0} comments
+          </p>
 
-          {/* Stats — pulled from real recipe fields, hidden if not set */}
-          {(recipe.cook_time || recipe.cost_estimate) && (
+          {/* Stats — pulled from real recipe fields, with currency conversion */}
+          {(recipe.cook_time || getConvertedCost()) && (
             <div className="flex gap-4 mt-4">
               {recipe.cook_time && (
                 <div className="flex flex-col items-center gap-1">
@@ -146,12 +196,12 @@ const RecipeDetail = () => {
                   <span className="text-[10px] text-muted-foreground font-medium">{recipe.cook_time}</span>
                 </div>
               )}
-              {recipe.cost_estimate && (
+              {getConvertedCost() && (
                 <div className="flex flex-col items-center gap-1">
                   <div className="w-10 h-10 rounded-xl bg-light-orange flex items-center justify-center">
                     <DollarSign className="w-4 h-4 text-primary" />
                   </div>
-                  <span className="text-[10px] text-muted-foreground font-medium">{recipe.cost_estimate}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{getConvertedCost()}</span>
                 </div>
               )}
               {recipe.tags && recipe.tags.length > 0 && (
@@ -215,8 +265,21 @@ const RecipeDetail = () => {
           )}
         </div>
       </motion.div>
-      <CommentsSheet recipeId={commentsOpen ? id || null : null} onClose={() => setCommentsOpen(false)} onCountChange={(_, delta) => setRecipe((r: any) => r ? { ...r, comment_count: Math.max(0, (r.comment_count || 0) + delta) } : r)} />
-      {!commentsOpen && <ShareSheet recipe={shareOpen && id ? { id, title: recipe?.title || "Recipe" } : null} onClose={() => setShareOpen(false)} />}
+      <CommentsSheet
+        recipeId={commentsOpen ? id || null : null}
+        onClose={() => setCommentsOpen(false)}
+        onCountChange={(_, delta) =>
+          setRecipe((r: any) =>
+            r ? { ...r, comment_count: Math.max(0, (r.comment_count || 0) + delta) } : r
+          )
+        }
+      />
+      {!commentsOpen && (
+        <ShareSheet
+          recipe={shareOpen && id ? { id, title: recipe?.title || "Recipe" } : null}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 };

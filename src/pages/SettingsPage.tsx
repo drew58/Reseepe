@@ -1,30 +1,70 @@
-import { ArrowLeft, User, Bell, Globe, Lock, Palette, CircleHelp, LogOut, ChevronRight, Moon, Sun, Shield, FileText, MessageSquare, CreditCard } from "lucide-react";
+import { ArrowLeft, User, Bell, Globe, Lock, Palette, CircleHelp, LogOut, ChevronRight, Moon, Sun, Shield, FileText, MessageSquare, CreditCard, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
+import { supabase } from "@/integrations/supabase/client";
+import { SUPPORTED_CURRENCIES, getCurrencySymbol } from "@/lib/currency";
 import { motion, AnimatePresence } from "framer-motion";
-
-const currencies = ["USD ($)", "EUR (€)", "GBP (£)", "NGN (₦)", "JPY (¥)", "CAD (C$)", "AUD (A$)", "INR (₹)", "ZAR (R)", "GHS (₵)"];
+import { toast } from "sonner";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { dark, toggle: toggleDark } = useTheme();
   const [showCurrency, setShowCurrency] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState(() => localStorage.getItem("reseepe_currency") || "USD ($)");
+  const [selectedCurrency, setSelectedCurrency] = useState("USD");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [notifications, setNotifications] = useState({ push: true, email: false, sms: false });
 
-  const handleCurrencySelect = (c: string) => {
-    setSelectedCurrency(c);
-    localStorage.setItem("reseepe_currency", c);
-    setShowCurrency(false);
+  // Load user's currency from database on mount
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("currency")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Failed to load currency:", error);
+      } else if (data?.currency) {
+        setSelectedCurrency(data.currency);
+      }
+      setIsLoading(false);
+    })();
+  }, [user]);
+
+  const handleCurrencySelect = async (currency: string) => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ currency })
+        .eq("user_id", user.id);
+      
+      if (error) throw error;
+      
+      setSelectedCurrency(currency);
+      setShowCurrency(false);
+      toast.success(`Currency changed to ${currency}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save currency");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth", { replace: true });
   };
+
+  const currencyDisplay = `${selectedCurrency} ${getCurrencySymbol(selectedCurrency)}`;
 
   const sections = [
     {
@@ -38,7 +78,7 @@ const SettingsPage = () => {
     {
       title: "Preferences",
       items: [
-        { icon: Globe, label: "Currency", value: selectedCurrency, action: () => setShowCurrency(true) },
+        { icon: Globe, label: "Currency", value: currencyDisplay, action: () => setShowCurrency(true) },
         { icon: Palette, label: "Dark Mode", toggle: true, toggled: dark, action: toggleDark },
         { icon: Bell, label: "Notifications", action: () => {} },
       ],
@@ -60,6 +100,14 @@ const SettingsPage = () => {
     },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-24 pt-12 px-4">
       <div className="flex items-center gap-3 mb-6">
@@ -77,7 +125,8 @@ const SettingsPage = () => {
               <button
                 key={item.label}
                 onClick={item.action}
-                className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-secondary/50 transition-colors"
+                disabled={isSaving && item.label === "Currency"}
+                className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-secondary/50 transition-colors disabled:opacity-50"
               >
                 <item.icon className="w-4.5 h-4.5 text-primary" />
                 <span className="flex-1 text-sm font-medium text-foreground text-left">{item.label}</span>
@@ -125,15 +174,16 @@ const SettingsPage = () => {
             >
               <h2 className="text-lg font-bold font-display text-foreground mb-4">Select Currency</h2>
               <div className="space-y-1">
-                {currencies.map((c) => (
+                {SUPPORTED_CURRENCIES.map((code) => (
                   <button
-                    key={c}
-                    onClick={() => handleCurrencySelect(c)}
-                    className={`w-full px-4 py-3 rounded-xl text-sm text-left transition-colors ${
-                      selectedCurrency === c ? "bg-primary/10 text-primary font-semibold" : "text-foreground hover:bg-secondary"
+                    key={code}
+                    onClick={() => handleCurrencySelect(code)}
+                    disabled={isSaving}
+                    className={`w-full px-4 py-3 rounded-xl text-sm text-left transition-colors disabled:opacity-50 ${
+                      selectedCurrency === code ? "bg-primary/10 text-primary font-semibold" : "text-foreground hover:bg-secondary"
                     }`}
                   >
-                    {c}
+                    {code} {getCurrencySymbol(code)}
                   </button>
                 ))}
               </div>
