@@ -196,14 +196,14 @@ const RecipeDetail = () => {
                   <span className="text-[10px] text-muted-foreground font-medium">{recipe.cook_time}</span>
                 </div>
               )}
-              {getConvertedCost() && (
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-10 h-10 rounded-xl bg-light-orange flex items-center justify-center">
-                    <DollarSign className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground font-medium">{getConvertedCost()}</span>
-                </div>
-              )}
+             {getConvertedCost() && (
+  <div className="flex flex-col items-center gap-1">
+    <div className="w-10 h-10 rounded-xl bg-light-orange flex items-center justify-center">
+      <span className="text-sm font-bold text-primary">{getCurrencySymbol(userCurrency)}</span>
+    </div>
+    <span className="text-[10px] text-muted-foreground font-medium">{getConvertedCost()}</span>
+  </div>
+)}
               {recipe.tags && recipe.tags.length > 0 && (
                 <div className="flex flex-col items-center gap-1">
                   <div className="w-10 h-10 rounded-xl bg-light-orange flex items-center justify-center">
