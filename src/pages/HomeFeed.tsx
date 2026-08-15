@@ -1,4 +1,4 @@
-import { Search, Crown, Lock, MessageSquare, Play, Volume2, VolumeX, BookOpen } from "lucide-react";
+import { Search, Crown, Lock, MessageSquare, Play, Volume2, VolumeX, BookOpen, MoreVertical, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -7,6 +7,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getFeedCache, setFeedCache } from "@/lib/feedCache";
+import { toast } from "sonner";
 
 type Recipe = {
   id: string;
@@ -78,9 +79,15 @@ const FeedVideo = ({ src, poster, title }: { src: string; poster?: string; title
         aria-label={title}
         className="w-full h-full object-cover"
       />
-      {/* Mute/unmute hint */}
       <button
-        onClick={(e) => { e.stopPropagation(); setMuted((m) => { const nm = !m; if (ref.current) ref.current.muted = nm; return nm; }); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setMuted((m) => {
+            const nm = !m;
+            if (ref.current) ref.current.muted = nm;
+            return nm;
+          });
+        }}
         className="absolute bottom-3 right-3 z-30 w-9 h-9 rounded-full bg-foreground/40 backdrop-blur-md flex items-center justify-center"
         aria-label={muted ? "Unmute" : "Mute"}
       >
@@ -102,6 +109,8 @@ const HomeFeed = () => {
   const { user } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>(() => getFeedCache<Recipe>());
   const [loading, setLoading] = useState(() => getFeedCache<Recipe>().length === 0);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -117,17 +126,39 @@ const HomeFeed = () => {
         supabase.from("featured_creators" as any).select("username,verified,country"),
       ]);
       const profMap = new Map((profs || []).map((p: any) => [p.user_id, p]));
-      const fcMap = new Map((fcs as any[] || []).map((f: any) => [f.username, f]));
+      const fcMap = new Map(
+        (fcs as any[] || []).map((f: any) => [f.username, f])
+      );
       const enriched = rows.map((r) => {
-          const p = profMap.get(r.creator_id);
-          const fc = p?.username ? fcMap.get(p.username) : null;
-          return { ...r, creator: p, verified: !!fc?.verified, country: fc?.country || null };
-        });
+        const p = profMap.get(r.creator_id);
+        const fc = p?.username ? fcMap.get(p.username) : null;
+        return { ...r, creator: p, verified: !!fc?.verified, country: fc?.country || null };
+      });
       setRecipes(enriched);
       setFeedCache(enriched);
       setLoading(false);
     })();
   }, []);
+
+  const handleDeleteRecipe = async (recipeId: string, creatorId: string) => {
+    if (!user || user.id !== creatorId) {
+      toast.error("You can only delete your own recipes");
+      return;
+    }
+
+    setDeleting(recipeId);
+    try {
+      const { error } = await supabase.from("recipes").delete().eq("id", recipeId);
+      if (error) throw error;
+      toast.success("Recipe deleted");
+      setRecipes(recipes.filter((r) => r.id !== recipeId));
+      setMenuOpen(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete recipe");
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -174,18 +205,26 @@ const HomeFeed = () => {
               <div className="w-full h-full bg-secondary" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent pointer-events-none" />
+            
             {/* Tags */}
             {r.tags && r.tags.length > 0 && (
               <div className="absolute top-4 left-4 flex flex-wrap gap-1.5 pointer-events-none">
                 {r.tags.slice(0, 2).map((t) => (
-                  <span key={t} className="tag-badge bg-card/80 text-foreground">{t}</span>
+                  <span key={t} className="tag-badge bg-card/80 text-foreground">
+                    {t}
+                  </span>
                 ))}
               </div>
             )}
+
+            {/* Creator avatar */}
             {r.creator?.avatar_url && (
               <button
-                onClick={(e) => { e.stopPropagation(); navigate(`/creator/${r.creator?.username}`); }}
-                className="absolute top-4 right-4 z-20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/creator/${r.creator?.username}`);
+                }}
+                className="absolute top-4 right-12 z-20"
               >
                 <div className="relative">
                   <img src={r.creator.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/80 shadow-lg" />
@@ -193,6 +232,36 @@ const HomeFeed = () => {
                 </div>
               </button>
             )}
+
+            {/* 3-dot menu button (only on click) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(menuOpen === r.id ? null : r.id);
+              }}
+              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/50 transition-colors"
+            >
+              <MoreVertical className="w-4 h-4 text-primary-foreground" />
+            </button>
+
+            {/* Delete menu dropdown */}
+            {menuOpen === r.id && (
+              <div
+                className="absolute top-14 right-4 z-30 bg-card border border-border rounded-xl overflow-hidden shadow-lg"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => handleDeleteRecipe(r.id, r.creator_id)}
+                  disabled={deleting === r.id}
+                  className="w-full px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 text-left font-semibold flex items-center gap-2 disabled:opacity-50"
+                >
+                  {deleting === r.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Delete Recipe
+                </button>
+              </div>
+            )}
+
+            {/* Recipe info */}
             <div className="absolute bottom-4 left-4 right-16 z-10 pointer-events-none">
               <h3 className="text-primary-foreground font-bold text-lg leading-tight line-clamp-2">{r.title}</h3>
               <div className="flex items-center gap-1 mt-1">
@@ -205,7 +274,10 @@ const HomeFeed = () => {
                 <span>♥ {r.like_count}</span>
               </div>
               <button
-                onClick={(e) => { e.stopPropagation(); navigate(`/recipe/${r.id}`); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/recipe/${r.id}`);
+                }}
                 className="pointer-events-auto mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold"
               >
                 <BookOpen className="w-3.5 h-3.5" /> View Recipe
