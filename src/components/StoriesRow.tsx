@@ -128,7 +128,7 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
 
   return (
     <>
-      <div className="flex gap-2.5 overflow-x-auto pb-3 scrollbar-hide px-4 -mx-4">
+      <div className="flex gap-2.5 overflow-x-auto pb-3 scrollbar-hide px-6">
         {/* Your story */}
         {user && userProfile && (
           <motion.button
@@ -173,7 +173,7 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
                 <img
                   src={story.creator_avatar}
                   alt={story.creator_name}
-                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full object-cover border-2 border-background"
+                  className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full object-cover border-2 border-background"
                 />
               )}
             </div>

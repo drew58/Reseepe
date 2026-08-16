@@ -118,12 +118,9 @@ const StoryViewer = ({ story, onClose, onDelete }: StoryViewerProps) => {
                     className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/50"
                   />
                 )}
-                <div>
-                  <p className="text-sm font-bold text-primary-foreground">
-                    {story.creator_name || "Chef"}
-                  </p>
-                  <p className="text-xs text-primary-foreground/80">Just now</p>
-                </div>
+                <p className="text-sm font-bold text-primary-foreground">
+                  {story.creator_name || "Chef"}
+                </p>
               </div>
             </div>
 
