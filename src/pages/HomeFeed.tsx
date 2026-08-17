@@ -8,7 +8,6 @@ import VideoFullScreenModal from "@/components/VideoFullScreenModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getFeedCache, setFeedCache } from "@/lib/feedCache";
-import { toast } from "sonner";
 
 type Recipe = {
   id: string;
@@ -44,7 +43,10 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
   }, []);
 
   return (
-    <div className="relative w-full h-full group cursor-pointer" onClick={onFullscreen}>
+    <div 
+      className="relative w-full h-full cursor-pointer"
+      onClick={onFullscreen}
+    >
       <video
         ref={ref}
         src={src}
@@ -60,10 +62,6 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
         className="w-full h-full object-cover"
         aria-label={title}
       />
-      {/* Fullscreen hint */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-foreground/5">
-        <span className="text-xs text-primary-foreground/70 font-medium">Tap for fullscreen</span>
-      </div>
     </div>
   );
 };
@@ -199,9 +197,22 @@ const HomeFeed = () => {
             <div className="aspect-[9/14] bg-secondary relative group overflow-hidden">
               {/* Media */}
               {r.video_url ? (
-                <FeedVideo src={r.video_url} poster={r.thumbnail_url || undefined} title={r.title} onFullscreen={() => { setFullscreenVideo(r.video_url); setFullscreenTitle(r.title); }} />
+                <FeedVideo 
+                  src={r.video_url} 
+                  poster={r.thumbnail_url || undefined} 
+                  title={r.title}
+                  onFullscreen={() => {
+                    setFullscreenVideo(r.video_url);
+                    setFullscreenTitle(r.title);
+                  }}
+                />
               ) : r.thumbnail_url ? (
-                <img src={r.thumbnail_url} alt={r.title} className="w-full h-full object-cover cursor-pointer" onClick={() => navigate(`/recipe/${r.id}`)} />
+                <img 
+                  src={r.thumbnail_url} 
+                  alt={r.title} 
+                  className="w-full h-full object-cover cursor-pointer" 
+                  onClick={() => navigate(`/recipe/${r.id}`)} 
+                />
               ) : (
                 <div className="w-full h-full bg-secondary" />
               )}
@@ -211,7 +222,13 @@ const HomeFeed = () => {
 
               {/* Creator info - top */}
               {r.creator?.avatar_url && (
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate(`/creator/${r.creator?.username}`)}>
+                <div 
+                  className="absolute top-4 left-4 z-20 flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/creator/${r.creator?.username}`);
+                  }}
+                >
                   <img src={r.creator.avatar_url} alt={r.creator.display_name} className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/60" />
                   <div className="flex items-center gap-1">
                     <span className="text-sm font-semibold text-primary-foreground">{r.creator.display_name}</span>
@@ -229,7 +246,7 @@ const HomeFeed = () => {
                 </div>
               </div>
 
-              {/* Action buttons - right side (on hover) */}
+              {/* Action buttons - right side (hidden by default) */}
               <div className="absolute right-3 bottom-20 z-20 flex flex-col gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -279,11 +296,6 @@ const HomeFeed = () => {
                 >
                   <Share2 className="w-5 h-5 text-primary-foreground" />
                 </motion.button>
-              </div>
-
-              {/* Tap to view hint - REMOVE THIS */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <span className="text-sm text-primary-foreground/70 font-medium">Tap to view recipe</span>
               </div>
             </div>
           </motion.div>
