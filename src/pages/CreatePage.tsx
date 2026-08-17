@@ -192,7 +192,7 @@ const CreatePage = () => {
                   : "bg-secondary text-foreground border border-border"
               }`}
             >
-              📱 Post (Feed)
+            Post (Feed)
             </button>
             <button
               onClick={() => setPostType("reel")}
@@ -202,7 +202,7 @@ const CreatePage = () => {
                   : "bg-secondary text-foreground border border-border"
               }`}
             >
-              🎬 Reel (Shorts)
+            Reel (Shorts)
             </button>
           </div>
         </div>
