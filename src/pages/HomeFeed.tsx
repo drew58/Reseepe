@@ -233,13 +233,9 @@ const HomeFeed = () => {
                 </div>
               )}
 
-              {/* Title & stats - bottom */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-                <h2 className="text-lg font-bold text-primary-foreground mb-2 line-clamp-2">{r.title}</h2>
-                <div className="flex items-center gap-3 text-sm text-primary-foreground/90">
-                  <span>❤️ {r.like_count}</span>
-                  <span>💬 {r.comment_count}</span>
-                </div>
+              {/* Title only at bottom - stats removed */}
+              <div className="absolute bottom-16 left-0 right-0 p-4 z-10">
+                <h2 className="text-base font-bold text-primary-foreground line-clamp-2">{r.title}</h2>
               </div>
 
               {/* Action buttons - right side - APPEAR ON HOVER */}
@@ -298,14 +294,14 @@ const HomeFeed = () => {
                 </motion.button>
               </div>
 
-              {/* VIEW RECIPE BUTTON - APPEAR ON HOVER AT BOTTOM */}
-              <div className="absolute bottom-4 left-4 right-12 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {/* VIEW RECIPE BUTTON - ALWAYS VISIBLE AT BOTTOM */}
+              <div className="absolute bottom-4 left-4 right-4 z-20">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/recipe/${r.id}`);
                   }}
-                  className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+                  className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors active:scale-[0.97]"
                 >
                   View Recipe
                 </button>
