@@ -83,6 +83,7 @@ const HomeFeed = () => {
       const { data } = await supabase
         .from("recipes")
         .select("*")
+        .eq("post_type", "post")
         .order("created_at", { ascending: false })
         .limit(20);
 
@@ -233,8 +234,12 @@ const HomeFeed = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => toggleLike(r.id, likedRecipes.has(r.id))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLike(r.id, likedRecipes.has(r.id));
+                  }}
                   className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
+                  title="Like"
                 >
                   <Heart className={`w-5 h-5 ${likedRecipes.has(r.id) ? "fill-red-500 text-red-500" : "text-primary-foreground"}`} />
                 </motion.button>
@@ -242,8 +247,12 @@ const HomeFeed = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate(`/recipe/${r.id}`)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/recipe/${r.id}`);
+                  }}
                   className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
+                  title="Comment"
                 >
                   <MessageSquare className="w-5 h-5 text-primary-foreground" />
                 </motion.button>
@@ -251,8 +260,12 @@ const HomeFeed = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => toggleSave(r.id, savedRecipes.has(r.id))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSave(r.id, savedRecipes.has(r.id));
+                  }}
                   className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
+                  title="Save"
                 >
                   <Bookmark className={`w-5 h-5 ${savedRecipes.has(r.id) ? "fill-primary text-primary" : "text-primary-foreground"}`} />
                 </motion.button>
@@ -260,13 +273,15 @@ const HomeFeed = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={(e) => e.stopPropagation()}
                   className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
+                  title="Share"
                 >
                   <Share2 className="w-5 h-5 text-primary-foreground" />
                 </motion.button>
               </div>
 
-              {/* Tap to view hint */}
+              {/* Tap to view hint - REMOVE THIS */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <span className="text-sm text-primary-foreground/70 font-medium">Tap to view recipe</span>
               </div>
