@@ -110,7 +110,6 @@ const HomeFeed = () => {
     })();
   }, []);
 
-  // Load likes & saves
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -125,7 +124,6 @@ const HomeFeed = () => {
 
   const toggleLike = async (id: string, isLiked: boolean) => {
     if (!user) return navigate("/auth");
-
     const next = !isLiked;
     const newLiked = new Set(likedRecipes);
     if (next) newLiked.add(id);
@@ -141,7 +139,6 @@ const HomeFeed = () => {
 
   const toggleSave = async (id: string, isSaved: boolean) => {
     if (!user) return navigate("/auth");
-
     const next = !isSaved;
     const newSaved = new Set(savedRecipes);
     if (next) newSaved.add(id);
@@ -157,11 +154,11 @@ const HomeFeed = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header - minimal */}
+      {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg px-4 py-4">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold text-primary">RESEEPE</h1>
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <button className="w-10 h-10 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center transition-colors" onClick={() => navigate("/messages")}>
               <MessageSquare className="w-5 h-5 text-foreground" />
             </button>
@@ -195,7 +192,7 @@ const HomeFeed = () => {
           >
             {/* Recipe Card */}
             <div className="aspect-[9/14] bg-secondary relative group overflow-hidden">
-              {/* Media */}
+              {/* Media - CLICK CENTER FOR FULLSCREEN */}
               {r.video_url ? (
                 <FeedVideo 
                   src={r.video_url} 
@@ -210,8 +207,7 @@ const HomeFeed = () => {
                 <img 
                   src={r.thumbnail_url} 
                   alt={r.title} 
-                  className="w-full h-full object-cover cursor-pointer" 
-                  onClick={() => navigate(`/recipe/${r.id}`)} 
+                  className="w-full h-full object-cover" 
                 />
               ) : (
                 <div className="w-full h-full bg-secondary" />
@@ -220,7 +216,7 @@ const HomeFeed = () => {
               {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-transparent to-transparent pointer-events-none" />
 
-              {/* Creator info - top */}
+              {/* Creator info - top left - CLICK TO VIEW PROFILE */}
               {r.creator?.avatar_url && (
                 <div 
                   className="absolute top-4 left-4 z-20 flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
@@ -241,13 +237,14 @@ const HomeFeed = () => {
               <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
                 <h2 className="text-lg font-bold text-primary-foreground mb-2 line-clamp-2">{r.title}</h2>
                 <div className="flex items-center gap-3 text-sm text-primary-foreground/90">
-                  <span className="flex items-center gap-1">❤️ {r.like_count}</span>
-                  <span className="flex items-center gap-1">💬 {r.comment_count}</span>
+                  <span>❤️ {r.like_count}</span>
+                  <span>💬 {r.comment_count}</span>
                 </div>
               </div>
 
-              {/* Action buttons - right side (hidden by default) */}
+              {/* Action buttons - right side - APPEAR ON HOVER */}
               <div className="absolute right-3 bottom-20 z-20 flex flex-col gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                {/* Like */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
@@ -261,6 +258,7 @@ const HomeFeed = () => {
                   <Heart className={`w-5 h-5 ${likedRecipes.has(r.id) ? "fill-red-500 text-red-500" : "text-primary-foreground"}`} />
                 </motion.button>
 
+                {/* Comment */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
@@ -274,6 +272,7 @@ const HomeFeed = () => {
                   <MessageSquare className="w-5 h-5 text-primary-foreground" />
                 </motion.button>
 
+                {/* Save */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
@@ -287,6 +286,7 @@ const HomeFeed = () => {
                   <Bookmark className={`w-5 h-5 ${savedRecipes.has(r.id) ? "fill-primary text-primary" : "text-primary-foreground"}`} />
                 </motion.button>
 
+                {/* Share */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
@@ -297,13 +297,26 @@ const HomeFeed = () => {
                   <Share2 className="w-5 h-5 text-primary-foreground" />
                 </motion.button>
               </div>
+
+              {/* VIEW RECIPE BUTTON - APPEAR ON HOVER AT BOTTOM */}
+              <div className="absolute bottom-4 left-4 right-12 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/recipe/${r.id}`);
+                  }}
+                  className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+                >
+                  View Recipe
+                </button>
+              </div>
             </div>
           </motion.div>
         ))}
 
         {!loading && recipes.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-muted-foreground text-sm">No recipes yet. Start following creators!</p>
+            <p className="text-muted-foreground text-sm">No recipes yet</p>
           </div>
         )}
       </div>
