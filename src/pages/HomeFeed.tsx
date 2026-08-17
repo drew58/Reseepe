@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import StoriesRow from "@/components/StoriesRow";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VideoFullScreenModal from "@/components/VideoFullScreenModal";
+import CommentsSheet from "@/components/CommentsSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getFeedCache, setFeedCache } from "@/lib/feedCache";
@@ -44,8 +45,12 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
 
   return (
     <div 
-      className="relative w-full h-full cursor-pointer"
-      onClick={onFullscreen}
+      className="relative w-full h-full cursor-pointer group"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onFullscreen?.();
+        }
+      }}
     >
       <video
         ref={ref}
@@ -62,6 +67,10 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
         className="w-full h-full object-cover"
         aria-label={title}
       />
+      {/* Fullscreen hint */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none bg-black/10">
+        <span className="text-xs text-primary-foreground/70 font-medium">Tap to fullscreen</span>
+      </div>
     </div>
   );
 };
@@ -75,6 +84,7 @@ const HomeFeed = () => {
   const [savedRecipes, setSavedRecipes] = useState<Set<string>>(new Set());
   const [fullscreenVideo, setFullscreenVideo] = useState<string | null>(null);
   const [fullscreenTitle, setFullscreenTitle] = useState("");
+  const [commentRecipeId, setCommentRecipeId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -175,7 +185,7 @@ const HomeFeed = () => {
       </div>
 
       {/* Feed */}
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto px-4 space-y-4">
         {loading && (
           <div className="flex justify-center py-12">
             <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -188,7 +198,6 @@ const HomeFeed = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: idx * 0.1 }}
-            className="border-b border-border/30"
           >
             {/* Recipe Card */}
             <div className="aspect-[9/14] bg-secondary relative group overflow-hidden">
@@ -260,7 +269,7 @@ const HomeFeed = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/recipe/${r.id}`);
+                    setCommentRecipeId(r.id);
                   }}
                   className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
                   title="Comment"
@@ -322,6 +331,12 @@ const HomeFeed = () => {
         src={fullscreenVideo}
         title={fullscreenTitle}
         onClose={() => setFullscreenVideo(null)}
+      />
+
+      {/* Comments sheet */}
+      <CommentsSheet
+        recipeId={commentRecipeId}
+        onClose={() => setCommentRecipeId(null)}
       />
     </div>
   );
