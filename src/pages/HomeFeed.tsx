@@ -1,4 +1,4 @@
-import { Search, MessageSquare, Heart, Bookmark, Share2 } from "lucide-react";
+import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -13,8 +13,11 @@ import { getFeedCache, setFeedCache } from "@/lib/feedCache";
 type Recipe = {
   id: string;
   title: string;
+  description: string | null;
   thumbnail_url: string | null;
   video_url: string | null;
+  cook_time: string | null;
+  cost_estimate: string | null;
   like_count: number;
   comment_count: number;
   creator_id: string;
@@ -67,10 +70,6 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
         className="w-full h-full object-cover"
         aria-label={title}
       />
-      {/* Fullscreen hint */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none bg-black/10">
-        <span className="text-xs text-primary-foreground/70 font-medium">Tap to fullscreen</span>
-      </div>
     </div>
   );
 };
@@ -85,6 +84,7 @@ const HomeFeed = () => {
   const [fullscreenVideo, setFullscreenVideo] = useState<string | null>(null);
   const [fullscreenTitle, setFullscreenTitle] = useState("");
   const [commentRecipeId, setCommentRecipeId] = useState<string | null>(null);
+  const [firstComment, setFirstComment] = useState<Record<string, any>>({});
 
   useEffect(() => {
     (async () => {
@@ -113,6 +113,19 @@ const HomeFeed = () => {
         const fc = p?.username ? fcMap.get(p.username) : null;
         return { ...r, creator: p, verified: !!fc?.verified };
       });
+
+      // Load first comment for each recipe
+      for (const recipe of enriched) {
+        const { data: comments } = await supabase
+          .from("comments")
+          .select("*, user:profiles(display_name, avatar_url)")
+          .eq("recipe_id", recipe.id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        if (comments && comments.length > 0) {
+          setFirstComment((prev) => ({ ...prev, [recipe.id]: comments[0] }));
+        }
+      }
 
       setRecipes(enriched);
       setFeedCache(enriched);
@@ -166,7 +179,7 @@ const HomeFeed = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg px-4 py-4">
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
+        <div className="flex items-center justify-between max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold text-primary">RESEEPE</h1>
           <div className="flex gap-2">
             <button className="w-10 h-10 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center transition-colors" onClick={() => navigate("/messages")}>
@@ -185,7 +198,7 @@ const HomeFeed = () => {
       </div>
 
       {/* Feed */}
-      <div className="max-w-2xl mx-auto px-4 space-y-4">
+      <div className="max-w-4xl mx-auto px-4">
         {loading && (
           <div className="flex justify-center py-12">
             <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -198,124 +211,175 @@ const HomeFeed = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: idx * 0.1 }}
+            className="mb-8"
           >
-            {/* Recipe Card */}
-            <div className="aspect-[9/14] bg-secondary relative group overflow-hidden">
-              {/* Media - CLICK CENTER FOR FULLSCREEN */}
-              {r.video_url ? (
-                <FeedVideo 
-                  src={r.video_url} 
-                  poster={r.thumbnail_url || undefined} 
-                  title={r.title}
-                  onFullscreen={() => {
-                    setFullscreenVideo(r.video_url);
-                    setFullscreenTitle(r.title);
-                  }}
-                />
-              ) : r.thumbnail_url ? (
-                <img 
-                  src={r.thumbnail_url} 
-                  alt={r.title} 
-                  className="w-full h-full object-cover" 
-                />
-              ) : (
-                <div className="w-full h-full bg-secondary" />
-              )}
+            {/* Recipe Card - Instagram Style */}
+            <div className="flex gap-4">
+              {/* Video/Image - 70% width */}
+              <div className="flex-1">
+                <div className="aspect-[9/14] bg-secondary rounded-lg overflow-hidden relative group">
+                  {/* Media */}
+                  {r.video_url ? (
+                    <FeedVideo 
+                      src={r.video_url} 
+                      poster={r.thumbnail_url || undefined} 
+                      title={r.title}
+                      onFullscreen={() => {
+                        setFullscreenVideo(r.video_url);
+                        setFullscreenTitle(r.title);
+                      }}
+                    />
+                  ) : r.thumbnail_url ? (
+                    <img 
+                      src={r.thumbnail_url} 
+                      alt={r.title} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-secondary" />
+                  )}
 
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-transparent to-transparent pointer-events-none" />
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent pointer-events-none" />
 
-              {/* Creator info - top left - CLICK TO VIEW PROFILE */}
-              {r.creator?.avatar_url && (
-                <div 
-                  className="absolute top-4 left-4 z-20 flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/creator/${r.creator?.username}`);
-                  }}
-                >
-                  <img src={r.creator.avatar_url} alt={r.creator.display_name} className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/60" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-semibold text-primary-foreground">{r.creator.display_name}</span>
-                    {r.verified && <VerifiedBadge size="sm" />}
+                  {/* Creator info - top left */}
+                  {r.creator?.avatar_url && (
+                    <div 
+                      className="absolute top-4 left-4 z-20 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/creator/${r.creator?.username}`);
+                      }}
+                    >
+                      <img src={r.creator.avatar_url} alt={r.creator.display_name} className="w-8 h-8 rounded-full object-cover border-2 border-primary-foreground/60" />
+                      <div className="flex items-center gap-0.5">
+                        <span className="text-xs font-semibold text-primary-foreground">{r.creator.display_name}</span>
+                        {r.verified && <VerifiedBadge size="sm" />}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Title + cook time + cost - bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+                    <h2 className="text-base font-bold text-primary-foreground mb-2">{r.title}</h2>
+                    <div className="flex items-center gap-2 text-xs text-primary-foreground/90">
+                      {r.cook_time && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {r.cook_time}
+                        </span>
+                      )}
+                      {r.cost_estimate && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3" /> {r.cost_estimate}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* Title only at bottom - stats removed */}
-              <div className="absolute bottom-16 left-0 right-0 p-4 z-10">
-                <h2 className="text-base font-bold text-primary-foreground line-clamp-2">{r.title}</h2>
               </div>
 
-              {/* Action buttons - right side - APPEAR ON HOVER */}
-              <div className="absolute right-3 bottom-20 z-20 flex flex-col gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                {/* Like */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleLike(r.id, likedRecipes.has(r.id));
-                  }}
-                  className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
-                  title="Like"
-                >
-                  <Heart className={`w-5 h-5 ${likedRecipes.has(r.id) ? "fill-red-500 text-red-500" : "text-primary-foreground"}`} />
-                </motion.button>
+              {/* Right Sidebar - 30% width */}
+              <div className="w-32 flex flex-col gap-4">
+                {/* Stats Column */}
+                <div className="flex flex-col gap-4 items-center pt-4">
+                  {/* Like */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => toggleLike(r.id, likedRecipes.has(r.id))}
+                    className="flex flex-col items-center gap-1 w-full"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
+                      <Heart className={`w-5 h-5 ${likedRecipes.has(r.id) ? "fill-red-500 text-red-500" : "text-foreground"}`} />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{r.like_count}</span>
+                  </motion.button>
 
-                {/* Comment */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCommentRecipeId(r.id);
-                  }}
-                  className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
-                  title="Comment"
-                >
-                  <MessageSquare className="w-5 h-5 text-primary-foreground" />
-                </motion.button>
+                  {/* Comment */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setCommentRecipeId(r.id)}
+                    className="flex flex-col items-center gap-1 w-full"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
+                      <MessageSquare className="w-5 h-5 text-foreground" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{r.comment_count}</span>
+                  </motion.button>
 
-                {/* Save */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSave(r.id, savedRecipes.has(r.id));
-                  }}
-                  className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
-                  title="Save"
-                >
-                  <Bookmark className={`w-5 h-5 ${savedRecipes.has(r.id) ? "fill-primary text-primary" : "text-primary-foreground"}`} />
-                </motion.button>
+                  {/* Save */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => toggleSave(r.id, savedRecipes.has(r.id))}
+                    className="flex flex-col items-center gap-1 w-full"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
+                      <Bookmark className={`w-5 h-5 ${savedRecipes.has(r.id) ? "fill-primary text-primary" : "text-foreground"}`} />
+                    </div>
+                    <span className="text-xs text-muted-foreground">0</span>
+                  </motion.button>
 
-                {/* Share */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center hover:bg-foreground/40 transition-colors"
-                  title="Share"
-                >
-                  <Share2 className="w-5 h-5 text-primary-foreground" />
-                </motion.button>
-              </div>
+                  {/* Share */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex flex-col items-center gap-1 w-full"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
+                      <Share2 className="w-5 h-5 text-foreground" />
+                    </div>
+                  </motion.button>
+                </div>
 
-              {/* VIEW RECIPE BUTTON - ALWAYS VISIBLE AT BOTTOM */}
-              <div className="absolute bottom-4 left-4 right-4 z-20">
+                {/* View Recipe Button */}
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/recipe/${r.id}`);
-                  }}
-                  className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors active:scale-[0.97]"
+                  onClick={() => navigate(`/recipe/${r.id}`)}
+                  className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors mt-4"
                 >
                   View Recipe
                 </button>
               </div>
             </div>
+
+            {/* Caption */}
+            {r.description && (
+              <div className="mt-2 ml-0">
+                <p className="text-sm text-foreground line-clamp-2">{r.description}</p>
+              </div>
+            )}
+
+            {/* First Comment */}
+            {firstComment[r.id] && (
+              <div className="mt-3 ml-0">
+                <div className="flex gap-2">
+                  {firstComment[r.id].user?.avatar_url && (
+                    <img 
+                      src={firstComment[r.id].user.avatar_url} 
+                      alt={firstComment[r.id].user.display_name} 
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-foreground">
+                      {firstComment[r.id].user?.display_name || "Anonymous"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{firstComment[r.id].content}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* View Comments Link */}
+            {r.comment_count > 0 && (
+              <button
+                onClick={() => setCommentRecipeId(r.id)}
+                className="text-xs text-muted-foreground mt-2 hover:text-foreground transition-colors"
+              >
+                View all {r.comment_count} comments
+              </button>
+            )}
           </motion.div>
         ))}
 
