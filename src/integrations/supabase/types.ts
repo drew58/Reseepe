@@ -161,9 +161,12 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          continent: string | null
           created_at: string
           display_name: string | null
+          favorite_cuisines: string[]
           id: string
+          preferences_set: boolean
           role: string
           subscription_tier: string
           updated_at: string
@@ -173,9 +176,12 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          continent?: string | null
           created_at?: string
           display_name?: string | null
+          favorite_cuisines?: string[]
           id?: string
+          preferences_set?: boolean
           role?: string
           subscription_tier?: string
           updated_at?: string
@@ -185,9 +191,12 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          continent?: string | null
           created_at?: string
           display_name?: string | null
+          favorite_cuisines?: string[]
           id?: string
+          preferences_set?: boolean
           role?: string
           subscription_tier?: string
           updated_at?: string
@@ -206,6 +215,7 @@ export type Database = {
           description: string | null
           id: string
           ingredients: string[] | null
+          is_reel: boolean
           like_count: number
           save_count: number
           steps: string[] | null
@@ -225,6 +235,7 @@ export type Database = {
           description?: string | null
           id?: string
           ingredients?: string[] | null
+          is_reel?: boolean
           like_count?: number
           save_count?: number
           steps?: string[] | null
@@ -244,6 +255,7 @@ export type Database = {
           description?: string | null
           id?: string
           ingredients?: string[] | null
+          is_reel?: boolean
           like_count?: number
           save_count?: number
           steps?: string[] | null
