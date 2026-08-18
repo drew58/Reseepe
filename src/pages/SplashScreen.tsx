@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 const letters = [
   { char: "R", color: "text-primary" },
   { char: "E", color: "text-primary" },
-  { char: "S", color: "text-primary" },
+  { char: "S", color: "text-[hsl(142,50%,45%)]" },
   { char: "E", color: "text-[hsl(142,50%,45%)]" },
   { char: "E", color: "text-[hsl(142,50%,45%)]" },
   { char: "P", color: "text-primary" },

@@ -191,6 +191,7 @@ const HomeFeed = () => {
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold font-display">
             <span className="text-primary">R</span>
+            <span className="text-primary">E</span>
             <span className="text-green-500">S</span>
             <span className="text-green-500">E</span>
             <span className="text-green-500">E</span>
