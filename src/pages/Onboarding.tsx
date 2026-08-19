@@ -58,24 +58,28 @@ const Onboarding = () => {
       return;
     }
 
-    if (!user) return;
-
     setLoading(true);
     try {
-      // Save preferences to profiles
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          favorite_cuisines: selectedCuisines,
-          continent: selectedContinent,
-          onboarded: true,
-        })
-        .eq("user_id", user.id);
+      // Set localStorage flag so user doesn't see onboarding again
+      localStorage.setItem("reseepe_onboarded", "true");
+      
+      // Save preferences if user is logged in
+      if (user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            favorite_cuisines: selectedCuisines,
+            continent: selectedContinent,
+            onboarded: true,
+          })
+          .eq("user_id", user.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
-      toast.success("Preferences saved!");
-      navigate("/home");
+      toast.success("Let's get cooking!");
+      // Redirect to Auth (or home if already logged in)
+      navigate(user ? "/home" : "/auth", { replace: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to save preferences");
     } finally {
@@ -95,7 +99,13 @@ const Onboarding = () => {
           >
             <div className="text-center">
               <h1 className="text-3xl font-bold font-display text-foreground mb-2">
-                Welcome to <span className="text-primary">RESEEPE</span>
+                Welcome to <span className="text-primary">R</span>
+                            <span className="text-primary">E</span>
+                            <span className="text-green-500">S</span>
+                            <span className="text-green-500">E</span>
+                            <span className="text-green-500">E</span>
+                            <span className="text-primary">P</span>
+                            <span className="text-primary">E</span>
               </h1>
               <p className="text-sm text-muted-foreground">
                 Help us personalize your feed

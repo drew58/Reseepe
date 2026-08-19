@@ -64,7 +64,15 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex flex-col px-6 pt-14 pb-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold font-display text-gradient">RESEEPE</h1>
+          <h1 className="text-3xl font-bold font-display text-gradient">
+            <span className="text-primary">R</span>
+            <span className="text-primary">E</span>
+            <span className="text-green-500">S</span>
+            <span className="text-green-500">E</span>
+            <span className="text-green-500">E</span>
+            <span className="text-primary">P</span>
+            <span className="text-primary">E</span>
+            </h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {isLogin ? "Welcome back! Sign in to continue" : "Create your account to get started"}
           </p>
