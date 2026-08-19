@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { isProfileComplete } from "@/lib/profile";
 
-type Profile = { user_id: string; display_name: string | null; username: string | null; avatar_url: string | null; bio: string | null };
+type Profile = { user_id: string; display_name: string | null; username: string | null; avatar_url: string | null; bio: string | null; specialty: string | null; country: string | null; role: string | null };
 type FC = { display_name: string; country: string | null; verified: boolean; followers_seed: number; is_premium: boolean };
 type Recipe = { id: string; title: string; thumbnail_url: string | null };
 
@@ -25,7 +26,7 @@ const CreatorProfile = () => {
     if (!id) return;
     (async () => {
       const { data: prof } = await supabase
-        .from("profiles").select("user_id,display_name,username,avatar_url,bio")
+        .from("profiles").select("user_id,display_name,username,avatar_url,bio,specialty,country,role")
         .eq("username", id).maybeSingle();
       if (!prof) { setLoading(false); return; }
       setProfile(prof as Profile);
