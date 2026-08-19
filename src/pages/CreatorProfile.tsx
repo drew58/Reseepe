@@ -95,7 +95,7 @@ const CreatorProfile = () => {
           <div className="flex-1 pb-1">
             <div className="flex items-center gap-1.5">
               <h1 className="font-bold text-lg text-foreground">{profile.display_name}</h1>
-              {meta?.verified && <VerifiedBadge size="md" />}
+              {(meta?.verified || isProfileComplete(profile, true)) && <VerifiedBadge size="md" />}
             </div>
             <p className="text-sm text-muted-foreground">@{profile.username} {meta?.country && `· ${meta.country}`}</p>
           </div>
@@ -113,6 +113,17 @@ const CreatorProfile = () => {
           </button>
           <button onClick={() => navigate(profile?.user_id ? `/messages/${profile.user_id}` : "/messages")} className="px-5 py-3 rounded-2xl bg-secondary text-foreground font-semibold text-sm">Message</button>
         </div>
+
+        {(profile.specialty || profile.country) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {profile.specialty && (
+              <span className="px-3 py-1 rounded-full bg-fresh/10 text-fresh text-[11px] font-semibold">{profile.specialty}</span>
+            )}
+            {profile.country && (
+              <span className="px-3 py-1 rounded-full bg-secondary text-foreground text-[11px] font-semibold">{profile.country}</span>
+            )}
+          </div>
+        )}
 
         {profile.bio && <p className="text-sm text-muted-foreground leading-relaxed mb-6">{profile.bio}</p>}
 
