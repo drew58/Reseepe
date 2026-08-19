@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
 import Index from "./pages/Index";
-import Onboarding from "./pages/Onboarding";
+import Onboarding from "@/pages/Onboarding";
 import Auth from "./pages/Auth";
 import HomeFeed from "./pages/HomeFeed";
 import SearchPage from "./pages/SearchPage";
