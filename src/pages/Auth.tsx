@@ -5,14 +5,8 @@ import { ChefHat, User, Eye, EyeOff, Loader2, Sparkles, Globe2, Utensils } from 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CUISINES, REGIONS } from "@/lib/taxonomy";
 
-const CUISINES = [
-  "Nigerian", "Ghanaian", "Ethiopian", "Moroccan", "Italian", "French", "Spanish",
-  "Chinese", "Japanese", "Korean", "Indian", "Thai", "Mexican", "Brazilian",
-  "Caribbean", "Lebanese", "Turkish", "American BBQ", "Vegan", "Desserts", "Street Food",
-];
-
-const REGIONS = ["Africa", "Europe", "Asia", "North America", "South America", "Oceania", "Middle East"];
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(false);

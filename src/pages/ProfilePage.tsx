@@ -1,33 +1,38 @@
-import { Settings, Bookmark, Users, ChevronRight, Loader2, Heart } from "lucide-react";
+import { Settings, Bookmark, Users, ChevronRight, Loader2, Heart, PlusCircle, Film, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import food1 from "@/assets/food-1.jpg";
+import VerifiedBadge from "@/components/VerifiedBadge";
+import ProfileCompletionCard from "@/components/ProfileCompletionCard";
+import { isProfileComplete } from "@/lib/profile";
 
 type Recipe = { id: string; title: string; thumbnail_url: string | null };
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, isCreator } = useAuth();
-  const [profile, setProfile] = useState<{ display_name: string | null; username: string | null; avatar_url: string | null; bio: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ display_name: string | null; username: string | null; avatar_url: string | null; bio: string | null; specialty: string | null; country: string | null } | null>(null);
+  const [myRecipesList, setMyRecipesList] = useState<Recipe[]>([]);
   const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
   const [subscribedRecipes, setSubscribedRecipes] = useState<Recipe[]>([]);
   const [counts, setCounts] = useState({ saved: 0, following: 0, followers: 0, recipes: 0 });
-  const [tab, setTab] = useState<"saved" | "subscribed">("saved");
+  const [tab, setTab] = useState<"saved" | "subscribed" | "mine">("saved");
   const [loading, setLoading] = useState(true);
 
   const loadAll = async () => {
     if (!user) return;
     const [{ data: prof }, { data: saves }, { data: follows }, { data: followers }, { data: myRecipes }] = await Promise.all([
-      supabase.from("profiles").select("display_name,username,avatar_url,bio").eq("user_id", user.id).maybeSingle(),
+      supabase.from("profiles").select("display_name,username,avatar_url,bio,specialty,country").eq("user_id", user.id).maybeSingle(),
       supabase.from("saves").select("recipe_id").eq("user_id", user.id),
       supabase.from("follows").select("following_id").eq("follower_id", user.id),
       supabase.from("follows").select("follower_id").eq("following_id", user.id),
-      supabase.from("recipes").select("id").eq("creator_id", user.id),
+      supabase.from("recipes").select("id,title,thumbnail_url").eq("creator_id", user.id).order("created_at", { ascending: false }),
     ]);
 
     setProfile(prof as any);
+    setMyRecipesList(((myRecipes as Recipe[]) || []).slice(0, 12));
 
     const savedIds = (saves || []).map((s) => s.recipe_id);
     const followingIds = (follows || []).map((f) => f.following_id);
@@ -69,6 +74,9 @@ const ProfilePage = () => {
   const username = profile?.username || user?.email?.split("@")[0] || "user";
   const initials = displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
 
+  const verified = isProfileComplete(profile, isCreator);
+  const currentList = tab === "saved" ? savedRecipes : tab === "mine" ? myRecipesList : subscribedRecipes;
+
   const menuItems = [
     { icon: Bookmark, label: "Saved Recipes", count: counts.saved, onClick: () => navigate("/saved") },
     { icon: Users, label: "Subscriptions", count: counts.following, onClick: () => navigate("/subscriptions") },
@@ -97,7 +105,8 @@ const ProfilePage = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="font-bold text-foreground truncate">{displayName}</h2>
-            {isCreator && <span className="text-[9px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">CREATOR</span>}
+            {verified && <VerifiedBadge size="sm" />}
+            {isCreator && <span className="text-[9px] font-bold bg-fresh/15 text-fresh px-1.5 py-0.5 rounded-full">CREATOR</span>}
           </div>
           <p className="text-xs text-muted-foreground truncate">@{username}</p>
           {profile?.bio && <p className="text-xs text-foreground/80 mt-1 line-clamp-2">{profile.bio}</p>}
@@ -109,6 +118,31 @@ const ProfilePage = () => {
           Edit
         </button>
       </div>
+
+      <ProfileCompletionCard profile={profile} isCreator={isCreator} />
+
+      {isCreator && (
+        <div className="glass-card p-4 mb-3 border border-fresh/20">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-fresh" />
+            <p className="text-sm font-semibold text-foreground">Creator Studio</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate("/create")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-fresh text-white text-xs font-semibold active:scale-[0.98] transition-transform"
+            >
+              <PlusCircle className="w-4 h-4" /> Upload Recipe
+            </button>
+            <button
+              onClick={() => setTab("mine")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-secondary text-foreground text-xs font-semibold active:scale-[0.98] transition-transform"
+            >
+              <Film className="w-4 h-4" /> My Posts
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
@@ -154,18 +188,30 @@ const ProfilePage = () => {
         >
           <Heart className="w-3.5 h-3.5 inline mr-1" /> Subscribed
         </button>
+        {isCreator && (
+          <button
+            onClick={() => setTab("mine")}
+            className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "mine" ? "bg-fresh text-white" : "bg-secondary text-foreground"}`}
+          >
+            <Film className="w-3.5 h-3.5 inline mr-1" /> My Posts
+          </button>
+        )}
       </div>
 
       {loading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {(tab === "saved" ? savedRecipes : subscribedRecipes).length === 0 ? (
+          {currentList.length === 0 ? (
             <p className="col-span-2 text-center text-xs text-muted-foreground py-8">
-              {tab === "saved" ? "No saved recipes yet." : "Subscribe to creators to see their recipes here."}
+              {tab === "saved"
+                ? "No saved recipes yet."
+                : tab === "mine"
+                ? "You haven't posted a recipe yet. Tap Upload Recipe to share your first dish."
+                : "Subscribe to creators to see their recipes here."}
             </p>
           ) : (
-            (tab === "saved" ? savedRecipes : subscribedRecipes).map((r) => (
+            currentList.map((r) => (
               <div
                 key={r.id}
                 className="aspect-square rounded-2xl overflow-hidden cursor-pointer active:scale-[0.97] transition-transform relative"
