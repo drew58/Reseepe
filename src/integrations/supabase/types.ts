@@ -162,12 +162,14 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           continent: string | null
+          country: string | null
           created_at: string
           display_name: string | null
           favorite_cuisines: string[]
           id: string
           preferences_set: boolean
           role: string
+          specialty: string | null
           subscription_tier: string
           updated_at: string
           user_id: string
@@ -177,12 +179,14 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           continent?: string | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           favorite_cuisines?: string[]
           id?: string
           preferences_set?: boolean
           role?: string
+          specialty?: string | null
           subscription_tier?: string
           updated_at?: string
           user_id: string
@@ -192,12 +196,14 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           continent?: string | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           favorite_cuisines?: string[]
           id?: string
           preferences_set?: boolean
           role?: string
+          specialty?: string | null
           subscription_tier?: string
           updated_at?: string
           user_id?: string
