@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ChefHat, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChefHat, User, Eye, EyeOff, Loader2, Sparkles, Globe2, Utensils } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CUISINES, REGIONS } from "@/lib/taxonomy";
+
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(false);
@@ -14,8 +16,18 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Creator-only fields
+  const [username, setUsername] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [country, setCountry] = useState("");
+  const [bio, setBio] = useState("");
+
   const navigate = useNavigate();
   const { signUp, signIn } = useAuth();
+
+  const isCreatorSignup = !isLogin && role === "creator";
+  const accent = isCreatorSignup ? "fresh" : "primary";
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -23,7 +35,15 @@ const Auth = () => {
       return;
     }
     if (!isLogin && !displayName) {
-      toast.error("Please enter your name");
+      toast.error(isCreatorSignup ? "Please enter your chef name" : "Please enter your name");
+      return;
+    }
+    if (isCreatorSignup && !specialty) {
+      toast.error("Pick your signature cuisine");
+      return;
+    }
+    if (isCreatorSignup && !country) {
+      toast.error("Pick the region you cook from");
       return;
     }
 
@@ -38,9 +58,26 @@ const Auth = () => {
           navigate("/home", { replace: true });
         }
       } else {
-        const { error } = await signUp(email, password, displayName, role);
+        const { data, error } = await signUp(
+          email,
+          password,
+          displayName,
+          role,
+          role === "creator"
+            ? {
+                specialty,
+                country,
+                bio: bio || undefined,
+                username: username ? username.replace(/^@/, "").trim() : undefined,
+              }
+            : undefined
+        );
         if (error) {
           toast.error(error.message);
+        } else if (data.session) {
+          localStorage.setItem("reseepe_onboarded", "true");
+          toast.success(role === "creator" ? "Welcome, Chef! Finish your profile to get verified." : "Welcome to RESEEPE!");
+          navigate(role === "creator" ? "/profile/edit" : "/home", { replace: true });
         } else {
           toast.success("Check your email to verify your account!");
         }
@@ -53,28 +90,29 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/home`,
-      },
+      options: { redirectTo: `${window.location.origin}/home` },
     });
     if (error) toast.error("Google sign-in failed: " + error.message);
   };
+
+  const inputClass =
+    "w-full px-4 py-3.5 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-6 pt-14 pb-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold font-display text-gradient">
-            <span className="text-primary">R</span>
-            <span className="text-primary">E</span>
-            <span className="text-green-500">S</span>
-            <span className="text-green-500">E</span>
-            <span className="text-green-500">E</span>
-            <span className="text-primary">P</span>
-            <span className="text-primary">E</span>
-            </h1>
+          <h1 className="text-3xl font-bold font-display">
+            <span className="text-primary">RE</span>
+            <span className="text-fresh">SEE</span>
+            <span className="text-primary">PE</span>
+          </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {isLogin ? "Welcome back! Sign in to continue" : "Create your account to get started"}
+            {isLogin
+              ? "Welcome back! Sign in to continue"
+              : isCreatorSignup
+              ? "Set up your kitchen and start posting recipes"
+              : "Create your account to get started"}
           </p>
         </div>
 
@@ -94,33 +132,121 @@ const Auth = () => {
             <button
               onClick={() => setRole("creator")}
               className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                role === "creator" ? "border-primary bg-light-orange" : "border-border bg-card"
+                role === "creator" ? "border-fresh bg-fresh/10" : "border-border bg-card"
               }`}
             >
-              <ChefHat className={`w-6 h-6 ${role === "creator" ? "text-primary" : "text-muted-foreground"}`} />
-              <span className={`text-sm font-semibold ${role === "creator" ? "text-primary" : "text-foreground"}`}>
+              <ChefHat className={`w-6 h-6 ${role === "creator" ? "text-fresh" : "text-muted-foreground"}`} />
+              <span className={`text-sm font-semibold ${role === "creator" ? "text-fresh" : "text-foreground"}`}>
                 Food Creator
               </span>
             </button>
           </div>
         )}
 
+        <AnimatePresence initial={false}>
+          {isCreatorSignup && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="rounded-2xl border border-fresh/30 bg-fresh/5 p-4 mb-5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-fresh" />
+                  <p className="text-xs font-semibold text-fresh">Creator account</p>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                  You get the upload studio, recipe analytics, subscribers and the green verification tick once
+                  your profile is complete.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="space-y-4">
           {!isLogin && (
             <input
               type="text"
-              placeholder="Full name"
+              placeholder={isCreatorSignup ? "Chef / brand name" : "Full name"}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className={inputClass}
             />
           )}
+
+          {isCreatorSignup && (
+            <>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                <input
+                  type="text"
+                  placeholder="username (your public handle)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.replace(/\s/g, "").toLowerCase())}
+                  className={`${inputClass} pl-8`}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <Utensils className="w-3.5 h-3.5 text-fresh" /> Signature cuisine
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {CUISINES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSpecialty(c)}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${
+                        specialty === c
+                          ? "bg-fresh text-white border-fresh"
+                          : "bg-card text-foreground border-border"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <Globe2 className="w-3.5 h-3.5 text-fresh" /> Where do you cook from?
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {REGIONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setCountry(r)}
+                      className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                        country === r ? "border-fresh bg-fresh/10 text-fresh" : "border-border bg-card text-foreground"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <textarea
+                placeholder="Short bio — what makes your cooking different?"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={3}
+                className={`${inputClass} resize-none`}
+              />
+            </>
+          )}
+
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3.5 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className={inputClass}
           />
           <div className="relative">
             <input
@@ -128,7 +254,7 @@ const Auth = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 pr-12"
+              className={`${inputClass} pr-12`}
             />
             <button
               onClick={() => setShowPassword(!showPassword)}
@@ -146,10 +272,14 @@ const Auth = () => {
         <button
           onClick={handleSubmit}
           disabled={isLoading}
-          className="w-full mt-6 bg-primary text-primary-foreground py-3.5 rounded-2xl font-semibold text-sm shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform disabled:opacity-60 flex items-center justify-center gap-2"
+          className={`w-full mt-6 py-3.5 rounded-2xl font-semibold text-sm shadow-lg active:scale-[0.98] transition-transform disabled:opacity-60 flex items-center justify-center gap-2 ${
+            accent === "fresh"
+              ? "bg-fresh text-white shadow-fresh/25"
+              : "bg-primary text-primary-foreground shadow-primary/25"
+          }`}
         >
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isLogin ? "Sign In" : "Create Account"}
+          {isLogin ? "Sign In" : isCreatorSignup ? "Create Creator Account" : "Create Account"}
         </button>
 
         <div className="flex items-center gap-4 my-6">

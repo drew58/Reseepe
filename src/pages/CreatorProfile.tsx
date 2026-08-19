@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { isProfileComplete } from "@/lib/profile";
 
-type Profile = { user_id: string; display_name: string | null; username: string | null; avatar_url: string | null; bio: string | null };
+type Profile = { user_id: string; display_name: string | null; username: string | null; avatar_url: string | null; bio: string | null; specialty: string | null; country: string | null; role: string | null };
 type FC = { display_name: string; country: string | null; verified: boolean; followers_seed: number; is_premium: boolean };
 type Recipe = { id: string; title: string; thumbnail_url: string | null };
 
@@ -25,7 +26,7 @@ const CreatorProfile = () => {
     if (!id) return;
     (async () => {
       const { data: prof } = await supabase
-        .from("profiles").select("user_id,display_name,username,avatar_url,bio")
+        .from("profiles").select("user_id,display_name,username,avatar_url,bio,specialty,country,role")
         .eq("username", id).maybeSingle();
       if (!prof) { setLoading(false); return; }
       setProfile(prof as Profile);
@@ -94,7 +95,7 @@ const CreatorProfile = () => {
           <div className="flex-1 pb-1">
             <div className="flex items-center gap-1.5">
               <h1 className="font-bold text-lg text-foreground">{profile.display_name}</h1>
-              {meta?.verified && <VerifiedBadge size="md" />}
+              {(meta?.verified || isProfileComplete(profile, true)) && <VerifiedBadge size="md" />}
             </div>
             <p className="text-sm text-muted-foreground">@{profile.username} {meta?.country && `· ${meta.country}`}</p>
           </div>
@@ -112,6 +113,17 @@ const CreatorProfile = () => {
           </button>
           <button onClick={() => navigate(profile?.user_id ? `/messages/${profile.user_id}` : "/messages")} className="px-5 py-3 rounded-2xl bg-secondary text-foreground font-semibold text-sm">Message</button>
         </div>
+
+        {(profile.specialty || profile.country) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {profile.specialty && (
+              <span className="px-3 py-1 rounded-full bg-fresh/10 text-fresh text-[11px] font-semibold">{profile.specialty}</span>
+            )}
+            {profile.country && (
+              <span className="px-3 py-1 rounded-full bg-secondary text-foreground text-[11px] font-semibold">{profile.country}</span>
+            )}
+          </div>
+        )}
 
         {profile.bio && <p className="text-sm text-muted-foreground leading-relaxed mb-6">{profile.bio}</p>}
 
