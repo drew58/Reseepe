@@ -56,6 +56,10 @@ export default {
         "soft-orange": "hsl(var(--soft-orange))",
         "deep-orange": "hsl(var(--deep-orange))",
         "light-orange": "hsl(var(--light-orange))",
+        fresh: {
+          DEFAULT: "hsl(var(--fresh))",
+          foreground: "hsl(var(--fresh-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
