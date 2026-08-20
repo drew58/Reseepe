@@ -164,9 +164,11 @@ export type Database = {
           continent: string | null
           country: string | null
           created_at: string
+          currency: string
           display_name: string | null
           favorite_cuisines: string[]
           id: string
+          onboarded: boolean
           preferences_set: boolean
           role: string
           specialty: string | null
@@ -181,9 +183,11 @@ export type Database = {
           continent?: string | null
           country?: string | null
           created_at?: string
+          currency?: string
           display_name?: string | null
           favorite_cuisines?: string[]
           id?: string
+          onboarded?: boolean
           preferences_set?: boolean
           role?: string
           specialty?: string | null
@@ -198,9 +202,11 @@ export type Database = {
           continent?: string | null
           country?: string | null
           created_at?: string
+          currency?: string
           display_name?: string | null
           favorite_cuisines?: string[]
           id?: string
+          onboarded?: boolean
           preferences_set?: boolean
           role?: string
           specialty?: string | null
@@ -223,6 +229,7 @@ export type Database = {
           ingredients: string[] | null
           is_reel: boolean
           like_count: number
+          post_type: string
           save_count: number
           steps: string[] | null
           tags: string[] | null
@@ -243,6 +250,7 @@ export type Database = {
           ingredients?: string[] | null
           is_reel?: boolean
           like_count?: number
+          post_type?: string
           save_count?: number
           steps?: string[] | null
           tags?: string[] | null
@@ -263,6 +271,7 @@ export type Database = {
           ingredients?: string[] | null
           is_reel?: boolean
           like_count?: number
+          post_type?: string
           save_count?: number
           steps?: string[] | null
           tags?: string[] | null
