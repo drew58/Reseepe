@@ -74,7 +74,7 @@ const EditProfilePage = () => {
         newAvatarUrl = urlData.publicUrl;
       }
 
-      const updates: Record<string, string | null> = {
+      const updates: Record<string, any> = {
         display_name: displayName || null,
         username: username || null,
         bio: bio || null,
@@ -83,7 +83,7 @@ const EditProfilePage = () => {
       } as any;
       if (newAvatarUrl) updates.avatar_url = newAvatarUrl;
 
-      const { error } = await supabase.from("profiles").update(updates).eq("user_id", user.id);
+      const { error } = await supabase.from("profiles").update(updates as any).eq("user_id", user.id);
 
       if (error) throw error;
       toast.success("Profile updated!");
