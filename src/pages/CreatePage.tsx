@@ -81,6 +81,7 @@ const CreatePage = () => {
         steps: steps.split("\n").filter(Boolean),
         tags: selectedTags,
         post_type: postType,
+        is_reel: postType === "reel",
       });
 
       if (error) throw error;

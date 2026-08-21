@@ -41,6 +41,8 @@
     --soft-orange: 24 85% 55%;
     --deep-orange: 16 70% 48%;
     --light-orange: 28 100% 95%;
+    --fresh: 142 50% 40%;
+    --fresh-foreground: 0 0% 100%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -72,6 +74,8 @@
     --border: 25 15% 20%;
     --input: 25 15% 20%;
     --ring: 24 85% 55%;
+    --fresh: 142 50% 48%;
+    --fresh-foreground: 0 0% 100%;
   }
 }
 

@@ -191,13 +191,9 @@ const HomeFeed = () => {
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg px-4 py-4">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold font-display">
-            <span className="text-primary">R</span>
-            <span className="text-primary">E</span>
-            <span className="text-green-500">S</span>
-            <span className="text-green-500">E</span>
-            <span className="text-green-500">E</span>
-            <span className="text-primary">P</span>
-            <span className="text-primary">E</span>
+            <span className="text-primary">RE</span>
+            <span className="text-fresh">SEE</span>
+            <span className="text-primary">PE</span>
           </h1>
           <div className="flex gap-2">
             <button className="w-10 h-10 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center transition-colors" onClick={() => navigate("/messages")}>

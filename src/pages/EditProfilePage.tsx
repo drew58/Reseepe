@@ -2,17 +2,20 @@ import { ArrowLeft, Camera, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { CUISINES, REGIONS } from "@/lib/taxonomy";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isCreator } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [country, setCountry] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -24,7 +27,7 @@ const EditProfilePage = () => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("display_name, username, bio, avatar_url")
+      .select("display_name, username, bio, avatar_url, specialty, country")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -32,6 +35,8 @@ const EditProfilePage = () => {
           setDisplayName(data.display_name || user.user_metadata?.display_name || "");
           setUsername(data.username || "");
           setBio(data.bio || "");
+          setSpecialty((data as any).specialty || "");
+          setCountry((data as any).country || "");
           setAvatarUrl(data.avatar_url || null);
         } else {
           setDisplayName(user.user_metadata?.display_name || "");
@@ -69,19 +74,16 @@ const EditProfilePage = () => {
         newAvatarUrl = urlData.publicUrl;
       }
 
-      const updates: {
-        display_name: string | null;
-        username: string | null;
-        bio: string | null;
-        avatar_url?: string;
-      } = {
+      const updates: Record<string, any> = {
         display_name: displayName || null,
         username: username || null,
         bio: bio || null,
-      };
+        specialty: specialty || null,
+        country: country || null,
+      } as any;
       if (newAvatarUrl) updates.avatar_url = newAvatarUrl;
 
-      const { error } = await supabase.from("profiles").update(updates).eq("user_id", user.id);
+      const { error } = await supabase.from("profiles").update(updates as any).eq("user_id", user.id);
 
       if (error) throw error;
       toast.success("Profile updated!");
@@ -156,6 +158,45 @@ const EditProfilePage = () => {
                 className="w-full px-4 py-3 rounded-2xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
               />
             </div>
+
+            {isCreator && (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-2 block">Signature Cuisine</label>
+                  <div className="flex flex-wrap gap-2">
+                    {CUISINES.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setSpecialty(c)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${
+                          specialty === c ? "bg-fresh text-white border-fresh" : "bg-card text-foreground border-border"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-2 block">Region</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {REGIONS.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setCountry(r)}
+                        className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                          country === r ? "border-fresh bg-fresh/10 text-fresh" : "border-border bg-card text-foreground"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <button
