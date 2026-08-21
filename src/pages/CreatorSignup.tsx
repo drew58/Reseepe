@@ -23,4 +23,253 @@ const CreatorSignup = () => {
   const [step, setStep] = useState(1); // 1 = basic, 2 = creator details
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>(\"\");\n  const [formData, setFormData] = useState({\n    email: \"\",\n    password: \"\",\n    chefName: \"\",\n    specialty: \"\",\n    bio: \"\",\n  });\n\n  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {\n    const file = e.target.files?.[0];\n    if (file) {\n      setProfileImage(file);\n      const reader = new FileReader();\n      reader.onloadend = () => {\n        setPreviewUrl(reader.result as string);\n      };\n      reader.readAsDataURL(file);\n    }\n  };\n\n  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {\n    const { name, value } = e.target;\n    setFormData((prev) => ({ ...prev, [name]: value }));\n  };\n\n  const handleContinue = () => {\n    if (!formData.email || !formData.password) {\n      toast.error(\"Email and password are required\");\n      return;\n    }\n    if (formData.password.length < 6) {\n      toast.error(\"Password must be at least 6 characters\");\n      return;\n    }\n    setStep(2);\n  };\n\n  const handleSignup = async () => {\n    if (!formData.chefName || !formData.specialty) {\n      toast.error(\"Chef name and specialty cuisine are required\");\n      return;\n    }\n\n    setLoading(true);\n    try {\n      // Sign up user\n      const { data: authData, error: authError } = await supabase.auth.signUp({\n        email: formData.email,\n        password: formData.password,\n      });\n\n      if (authError) throw authError;\n      if (!authData.user) throw new Error(\"Signup failed\");\n\n      // Upload profile image if provided\n      let profileImageUrl = null;\n      if (profileImage) {\n        const fileName = `${authData.user.id}-${Date.now()}`;\n        const { error: uploadError } = await supabase.storage\n          .from(\"creator-profiles\")\n          .upload(fileName, profileImage);\n\n        if (!uploadError) {\n          const { data: urlData } = supabase.storage\n            .from(\"creator-profiles\")\n            .getPublicUrl(fileName);\n          profileImageUrl = urlData.publicUrl;\n        }\n      }\n\n      // Create creator profile\n      const { error: profileError } = await supabase\n        .from(\"creator_profiles\")\n        .insert([\n          {\n            user_id: authData.user.id,\n            chef_name: formData.chefName,\n            specialty_cuisine: formData.specialty,\n            bio: formData.bio,\n            profile_image: profileImageUrl,\n            followers: 0,\n            is_verified: false,\n          },\n        ]);\n\n      if (profileError) throw profileError;\n\n      toast.success(\"Creator account created! Please verify your email.\");\n      navigate(\"/auth\", { replace: true });\n    } catch (err: any) {\n      toast.error(err.message || \"Failed to create creator account\");\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return (\n    <div className=\"min-h-screen bg-background flex flex-col items-center justify-center px-4 pb-20\">\n      <div className=\"max-w-md w-full\">\n        {/* Step 1 - Basic Info */}\n        {step === 1 && (\n          <motion.div\n            initial={{ opacity: 0, y: 20 }}\n            animate={{ opacity: 1, y: 0 }}\n            className=\"space-y-6\"\n          >\n            <div className=\"text-center\">\n              <h1 className=\"text-3xl font-bold font-display text-foreground mb-2\">\n                Become a Creator\n              </h1>\n              <p className=\"text-sm text-muted-foreground\">\n                Share your culinary skills with the world\n              </p>\n            </div>\n\n            <div className=\"space-y-3\">\n              <div>\n                <label className=\"text-sm font-semibold text-foreground mb-2 block\">\n                  Email\n                </label>\n                <input\n                  type=\"email\"\n                  name=\"email\"\n                  value={formData.email}\n                  onChange={handleInputChange}\n                  placeholder=\"your@email.com\"\n                  className=\"w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary\"\n                />\n              </div>\n\n              <div>\n                <label className=\"text-sm font-semibold text-foreground mb-2 block\">\n                  Password\n                </label>\n                <input\n                  type=\"password\"\n                  name=\"password\"\n                  value={formData.password}\n                  onChange={handleInputChange}\n                  placeholder=\"••••••••\"\n                  className=\"w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary\"\n                />\n              </div>\n            </div>\n\n            <button\n              onClick={handleContinue}\n              className=\"w-full py-3 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors\"\n            >\n              Continue <ChevronRight className=\"w-4 h-4\" />\n            </button>\n\n            <button\n              onClick={() => navigate(\"/auth\")}\n              className=\"w-full py-3 rounded-2xl bg-secondary text-foreground font-semibold hover:bg-secondary/80 transition-colors\"\n            >\n              Sign in instead\n            </button>\n          </motion.div>\n        )}\n\n        {/* Step 2 - Creator Details */}\n        {step === 2 && (\n          <motion.div\n            initial={{ opacity: 0, y: 20 }}\n            animate={{ opacity: 1, y: 0 }}\n            className=\"space-y-6\"\n          >\n            <div className=\"text-center\">\n              <h1 className=\"text-2xl font-bold font-display text-foreground mb-2\">\n                Your Chef Profile\n              </h1>\n              <p className=\"text-sm text-muted-foreground\">\n                Tell us about yourself\n              </p>\n            </div>\n\n            {/* Profile Image Upload */}\n            <div className=\"flex flex-col items-center\">\n              <div className=\"relative w-24 h-24 rounded-full bg-secondary overflow-hidden mb-3\">\n                {previewUrl ? (\n                  <img\n                    src={previewUrl}\n                    alt=\"Profile preview\"\n                    className=\"w-full h-full object-cover\"\n                  />\n                ) : (\n                  <div className=\"w-full h-full flex items-center justify-center\">\n                    <Upload className=\"w-8 h-8 text-muted-foreground\" />\n                  </div>\n                )}\n              </div>\n              <label className=\"cursor-pointer\">\n                <input\n                  type=\"file\"\n                  accept=\"image/*\"\n                  onChange={handleImageChange}\n                  className=\"hidden\"\n                />\n                <span className=\"text-sm font-semibold text-primary hover:underline\">\n                  Upload photo\n                </span>\n              </label>\n            </div>\n\n            <div className=\"space-y-3\">\n              <div>\n                <label className=\"text-sm font-semibold text-foreground mb-2 block\">\n                  Chef Name\n                </label>\n                <input\n                  type=\"text\"\n                  name=\"chefName\"\n                  value={formData.chefName}\n                  onChange={handleInputChange}\n                  placeholder=\"Your chef name\"\n                  className=\"w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary\"\n                />\n              </div>\n\n              <div>\n                <label className=\"text-sm font-semibold text-foreground mb-2 block\">\n                  Specialty Cuisine\n                </label>\n                <select\n                  name=\"specialty\"\n                  value={formData.specialty}\n                  onChange={(e) =>\n                    setFormData((prev) => ({ ...prev, specialty: e.target.value }))\n                  }\n                  className=\"w-full px-4 py-3 rounded-xl bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary\"\n                >\n                  <option value=\"\">Select your specialty</option>\n                  {cuisines.map((cuisine) => (\n                    <option key={cuisine} value={cuisine}>\n                      {cuisine}\n                    </option>\n                  ))}\n                </select>\n              </div>\n\n              <div>\n                <label className=\"text-sm font-semibold text-foreground mb-2 block\">\n                  Bio (Optional)\n                </label>\n                <textarea\n                  name=\"bio\"\n                  value={formData.bio}\n                  onChange={handleInputChange}\n                  placeholder=\"Write a short bio about yourself...\"\n                  rows={3}\n                  className=\"w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none\"\n                />\n              </div>\n            </div>\n\n            <div className=\"flex gap-2\">\n              <button\n                onClick={() => setStep(1)}\n                className=\"flex-1 py-3 rounded-2xl bg-secondary text-foreground font-semibold hover:bg-secondary/80 transition-colors\"\n              >\n                Back\n              </button>\n              <button\n                onClick={handleSignup}\n                disabled={loading}\n                className=\"flex-1 py-3 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60\"\n              >\n                {loading ? \"Creating...\" : \"Create Account\"}\n                <ChevronRight className=\"w-4 h-4\" />\n              </button>\n            </div>\n          </motion.div>\n        )}\n      </div>\n    </div>\n  );\n};\n\nexport default CreatorSignup;\n
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    chefName: "",
+    specialty: "",
+    bio: "",
+  });
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleContinue = () => {
+    if (!formData.email || !formData.password) {
+      toast.error("Email and password are required");
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleSignup = async () => {
+    if (!formData.chefName || !formData.specialty) {
+      toast.error("Chef name and specialty cuisine are required");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Sign up user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Signup failed");
+
+      // The auth trigger creates the matching profile and assigns the creator role.
+      // Profile fields can be completed after email verification.
+      toast.success("Creator account created! Please verify your email, then complete your profile.");
+      navigate("/auth", { replace: true });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create creator account");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 pb-20">
+      <div className="max-w-md w-full">
+        {/* Step 1 - Basic Info */}
+        {step === 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="text-center">
+              <h1 className="text-3xl font-bold font-display text-foreground mb-2">
+                Become a Creator
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Share your culinary skills with the world
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="your@email.com"
+                  className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleContinue}
+              className="w-full py-3 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+            >
+              Continue <ChevronRight className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => navigate("/auth")}
+              className="w-full py-3 rounded-2xl bg-secondary text-foreground font-semibold hover:bg-secondary/80 transition-colors"
+            >
+              Sign in instead
+            </button>
+          </motion.div>
+        )}
+
+        {/* Step 2 - Creator Details */}
+        {step === 2 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="text-center">
+              <h1 className="text-2xl font-bold font-display text-foreground mb-2">
+                Your Chef Profile
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Tell us about yourself
+              </p>
+            </div>
+
+            {/* Profile Image Upload */}
+            <div className="flex flex-col items-center">
+              <div className="relative w-24 h-24 rounded-full bg-secondary overflow-hidden mb-3">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Profile preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <span className="text-sm font-semibold text-primary hover:underline">
+                  Upload photo
+                </span>
+              </label>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  Chef Name
+                </label>
+                <input
+                  type="text"
+                  name="chefName"
+                  value={formData.chefName}
+                  onChange={handleInputChange}
+                  placeholder="Your chef name"
+                  className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  Specialty Cuisine
+                </label>
+                <select
+                  name="specialty"
+                  value={formData.specialty}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, specialty: e.target.value }))
+                  }
+                  className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select your specialty</option>
+                  {cuisines.map((cuisine) => (
+                    <option key={cuisine} value={cuisine}>
+                      {cuisine}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  Bio (Optional)
+                </label>
+                <textarea
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleInputChange}
+                  placeholder="Write a short bio about yourself..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep(1)}
+                className="flex-1 py-3 rounded-2xl bg-secondary text-foreground font-semibold hover:bg-secondary/80 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleSignup}
+                disabled={loading}
+                className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60"
+              >
+                {loading ? "Creating..." : "Create Account"}
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default CreatorSignup;

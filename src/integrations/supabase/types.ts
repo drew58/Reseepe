@@ -34,6 +34,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       featured_creators: {
         Row: {
@@ -72,6 +73,7 @@ export type Database = {
           followers_seed?: number
           created_at?: string
         }
+        Relationships: []
       }
       follows: {
         Row: {
@@ -92,6 +94,7 @@ export type Database = {
           following_id?: string
           created_at?: string
         }
+        Relationships: []
       }
       likes: {
         Row: {
@@ -112,6 +115,7 @@ export type Database = {
           recipe_id?: string
           created_at?: string
         }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -138,6 +142,7 @@ export type Database = {
           read_at?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -176,6 +181,7 @@ export type Database = {
           updated_at?: string
           currency?: string
         }
+        Relationships: []
       }
       recipes: {
         Row: {
@@ -235,6 +241,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       saves: {
         Row: {
@@ -255,6 +262,7 @@ export type Database = {
           recipe_id?: string
           created_at?: string
         }
+        Relationships: []
       }
       stories: {
         Row: {
@@ -284,6 +292,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
         }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -307,6 +316,9 @@ export type Database = {
       }
     }
     Views: {}
+    Enums: {
+      app_role: "admin" | "creator" | "user"
+    }
     Functions: {
       has_role: {
         Args: {

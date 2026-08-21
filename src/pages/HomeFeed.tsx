@@ -6,6 +6,7 @@ import StoriesRow from "@/components/StoriesRow";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VideoFullScreenModal from "@/components/VideoFullScreenModal";
 import CommentsSheet from "@/components/CommentsSheet";
+import CreatorNav from "@/components/CreatorNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getFeedCache, setFeedCache } from "@/lib/feedCache";
@@ -394,6 +395,9 @@ const HomeFeed = () => {
         recipeId={commentRecipeId}
         onClose={() => setCommentRecipeId(null)}
       />
+
+      {/* Creator button */}
+      <CreatorNav />
     </div>
   );
 };

@@ -1,133 +1,252 @@
-import { ArrowLeft, Star, Loader2 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Edit, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
 import VerifiedBadge from "@/components/VerifiedBadge";
 
-type Profile = { user_id: string; display_name: string | null; username: string | null; avatar_url: string | null; bio: string | null };
-type FC = { display_name: string; country: string | null; verified: boolean; followers_seed: number; is_premium: boolean };
-type Recipe = { id: string; title: string; thumbnail_url: string | null };
-
 const CreatorProfile = () => {
+  const { username } = useParams();
   const navigate = useNavigate();
-  const { id } = useParams(); // username
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [meta, setMeta] = useState<FC | null>(null);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const { user, isCreator } = useAuth();
+  const [profile, setProfile] = useState<{
+    user_id: string; display_name: string | null; username: string | null;
+    avatar_url: string | null; bio: string | null;
+  } | null>(null);
+  const [recipes, setRecipes] = useState<{ id: string; title: string; thumbnail_url: string | null }[]>([]);
+  const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState(0);
 
   useEffect(() => {
-    if (!id) return;
     (async () => {
-      const { data: prof } = await supabase
-        .from("profiles").select("user_id,display_name,username,avatar_url,bio")
-        .eq("username", id).maybeSingle();
-      if (!prof) { setLoading(false); return; }
-      setProfile(prof as Profile);
+      if (!username) return;
 
-      const [{ data: fc }, { data: recs }] = await Promise.all([
-        supabase.from("featured_creators" as any).select("display_name,country,verified,followers_seed,is_premium").eq("username", id).maybeSingle(),
-        supabase.from("recipes").select("id,title,thumbnail_url").eq("creator_id", prof.user_id).order("created_at", { ascending: false }),
-      ]);
-      setMeta((fc as any) || null);
-      setRecipes((recs as Recipe[]) || []);
+      // Fetch creator profile
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("username", username)
+        .single();
+
+      if (prof) {
+        setProfile(prof);
+        setIsOwnProfile(prof.user_id === user?.id);
+
+        // Check verification
+        const { data: fc } = await supabase
+          .from("featured_creators")
+          .select("verified")
+          .eq("username", username)
+          .single();
+
+        setVerified(!!fc?.verified);
+
+        // Calculate profile completion
+        let completion = 0;
+        if (prof.avatar_url) completion += 25;
+        if (prof.bio) completion += 25;
+        if (prof.display_name) completion += 25;
+        if (prof.username) completion += 25;
+        setProfileCompletion(completion);
+
+        // Fetch recipes
+        const { data: recs } = await supabase
+          .from("recipes")
+          .select("*")
+          .eq("creator_id", prof.user_id)
+          .order("created_at", { ascending: false })
+          .limit(12);
+
+        setRecipes(recs || []);
+
+        // Fetch followers
+        const { data: follows } = await supabase
+          .from("follows")
+          .select("*", { count: "exact" })
+          .eq("following_id", prof.user_id);
+
+        setFollowers(follows?.length || 0);
+
+        if (user) {
+          const { data: isFollowing } = await supabase
+            .from("follows")
+            .select("*")
+            .eq("follower_id", user.id)
+            .eq("following_id", prof.user_id)
+            .single();
+
+          setFollowing(!!isFollowing);
+        }
+      }
       setLoading(false);
     })();
-  }, [id]);
+  }, [username, user?.id]);
 
-  useEffect(() => {
-    if (!user || !profile) return;
-    const check = async () => {
-      const { data } = await supabase.from("follows").select("id")
-        .eq("follower_id", user.id).eq("following_id", profile.user_id).maybeSingle();
-      setFollowing(!!data);
-    };
-    check();
-    const ch = supabase.channel(`follow-${profile.user_id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "follows", filter: `follower_id=eq.${user.id}` }, check)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [user, profile]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
-  const toggle = async () => {
-    if (!user) { navigate("/auth"); return; }
-    if (!profile) return;
-    setBusy(true);
-    if (following) {
-      await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", profile.user_id);
-      toast.success(`Unsubscribed from ${profile.display_name}`);
-    } else {
-      await supabase.from("follows").insert({ follower_id: user.id, following_id: profile.user_id });
-      toast.success(`Subscribed to ${profile.display_name}`);
-    }
-    setBusy(false);
-  };
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
-  if (!profile) return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-      <p className="text-muted-foreground">Creator not found.</p>
-      <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold">Go back</button>
-    </div>
-  );
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Creator not found</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="relative h-40">
-        {profile.avatar_url && <img src={profile.avatar_url} alt="" className="w-full h-full object-cover blur-sm scale-110" />}
-        <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-        <button onClick={() => navigate(-1)} className="absolute top-12 left-4 w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center">
-          <ArrowLeft className="w-5 h-5 text-foreground" />
-        </button>
+    <div className="min-h-screen bg-background pb-20">
+      {/* Profile Header */}
+      <div className="bg-gradient-to-b from-secondary to-background px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          {/* Avatar */}
+          <div className="flex justify-center mb-4">
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile.display_name}
+                className="w-20 h-20 rounded-full object-cover border-4 border-primary"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-secondary border-4 border-primary flex items-center justify-center">
+                <span className="text-2xl font-bold text-foreground">
+                  {profile.display_name?.[0]?.toUpperCase()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Name with Verified Badge */}
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold text-foreground">{profile.display_name}</h1>
+            {verified && <VerifiedBadge size="md" />}
+          </div>
+
+          <p className="text-center text-muted-foreground text-sm mb-4">@{profile.username}</p>
+
+          {/* Stats */}
+          <div className="flex justify-center gap-8 mb-6 py-4 border-y border-border">
+            <div className="text-center">
+              <p className="text-lg font-bold text-foreground">{recipes.length}</p>
+              <p className="text-xs text-muted-foreground">Recipes</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-foreground">{followers}</p>
+              <p className="text-xs text-muted-foreground">Followers</p>
+            </div>
+          </div>
+
+          {/* Bio */}
+          {profile.bio && (
+            <p className="text-sm text-foreground text-center mb-4">{profile.bio}</p>
+          )}
+
+          {/* Profile Completion Status */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              {profileCompletion === 100 ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-xs font-semibold text-green-500">Profile Complete</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-4 h-4 text-yellow-500" />
+                  <span className="text-xs font-semibold text-yellow-500">
+                    Profile {profileCompletion}% Complete
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${profileCompletion}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            {isOwnProfile ? (
+              <>
+                <button
+                  onClick={() => navigate("/profile/edit")}
+                  className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Edit className="w-4 h-4" /> Edit Profile
+                </button>
+                {isCreator && (
+                  <button
+                    onClick={() => navigate("/create")}
+                    className="flex-1 py-2 rounded-lg bg-secondary text-foreground font-semibold text-sm hover:bg-secondary/80 transition-colors"
+                  >
+                    Create
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                onClick={async () => {
+                  if (!user) return navigate("/auth");
+                  if (following) {
+                    await supabase
+                      .from("follows")
+                      .delete()
+                      .eq("follower_id", user.id)
+                      .eq("following_id", profile.user_id);
+                  } else {
+                    await supabase.from("follows").insert({
+                      follower_id: user.id,
+                      following_id: profile.user_id,
+                    });
+                  }
+                  setFollowing(!following);
+                }}
+                className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                  following
+                    ? "bg-secondary text-foreground hover:bg-secondary/80"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
+              >
+                {following ? "Following" : "Follow"}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="px-4 -mt-12 relative z-10">
-        <div className="flex items-end gap-4 mb-4">
-          <div className="w-20 h-20 rounded-2xl border-4 border-background overflow-hidden bg-secondary">
-            {profile.avatar_url && <img src={profile.avatar_url} alt={profile.display_name || ""} className="w-full h-full object-cover" />}
-          </div>
-          <div className="flex-1 pb-1">
-            <div className="flex items-center gap-1.5">
-              <h1 className="font-bold text-lg text-foreground">{profile.display_name}</h1>
-              {meta?.verified && <VerifiedBadge size="md" />}
-            </div>
-            <p className="text-sm text-muted-foreground">@{profile.username} {meta?.country && `· ${meta.country}`}</p>
-          </div>
-        </div>
-
-        <div className="flex gap-6 mb-4">
-          <div><span className="font-bold text-foreground">{meta ? (meta.followers_seed / 1000).toFixed(1) + "k" : "—"}</span> <span className="text-xs text-muted-foreground">Followers</span></div>
-          <div><span className="font-bold text-foreground">{recipes.length}</span> <span className="text-xs text-muted-foreground">Recipes</span></div>
-          <div className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" /><span className="font-bold text-foreground">4.9</span></div>
-        </div>
-
-        <div className="flex gap-3 mb-6">
-          <button onClick={toggle} disabled={busy} className={`flex-1 py-3 rounded-2xl font-semibold text-sm shadow-lg ${following ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground shadow-primary/25"}`}>
-            {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : following ? "Subscribed" : "Subscribe"}
-          </button>
-          <button onClick={() => navigate(profile?.user_id ? `/messages/${profile.user_id}` : "/messages")} className="px-5 py-3 rounded-2xl bg-secondary text-foreground font-semibold text-sm">Message</button>
-        </div>
-
-        {profile.bio && <p className="text-sm text-muted-foreground leading-relaxed mb-6">{profile.bio}</p>}
-
-        <h3 className="font-bold text-foreground mb-3">Recipes</h3>
-        {recipes.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">No recipes yet.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {recipes.map((v) => (
-              <div key={v.id} className="aspect-[3/4] rounded-xl overflow-hidden cursor-pointer active:scale-[0.97] transition-transform relative" onClick={() => navigate(`/recipe/${v.id}`)}>
-                {v.thumbnail_url && <img src={v.thumbnail_url} alt={v.title} className="w-full h-full object-cover" loading="lazy" />}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/80 to-transparent p-1.5">
-                  <p className="text-[9px] font-semibold text-primary-foreground line-clamp-2">{v.title}</p>
-                </div>
+      {/* Recipes Grid */}
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {recipes.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4">
+            {recipes.map((recipe) => (
+              <div
+                key={recipe.id}
+                onClick={() => navigate(`/recipe/${recipe.id}`)}
+                className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity bg-secondary"
+              >
+                {recipe.thumbnail_url && (
+                  <img
+                    src={recipe.thumbnail_url}
+                    alt={recipe.title}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No recipes yet</p>
           </div>
         )}
       </div>
