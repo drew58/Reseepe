@@ -21,6 +21,8 @@ import ReelsPage from "./pages/ReelsPage";
 import MessagesPage from "./pages/MessagesPage";
 import ChatPage from "./pages/ChatPage";
 import NotFound from "./pages/NotFound";
+import CreatorDashboard from "@/pages/CreatorDashboard";
+
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,7 @@ const App = () => (
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/messages/:otherId" element={<ChatPage />} />
             <Route path="*" element={<NotFound />} />
+            <Route path="/creator-dashboard" element={<CreatorDashboard />} />
           </Routes>
           <BottomNav />
         </div>
